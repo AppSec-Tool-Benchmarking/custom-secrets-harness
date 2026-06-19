@@ -1,0 +1,48 @@
+{
+  "_comment": "TEST HARNESS: All credential values below are FAKE for secrets detection benchmarking. See secrets-manifest.csv.",
+  "app": {
+    "name": "MyApplication",
+    "environment": "production"
+  },
+  "database": {
+    "MANIFEST_ID_60_postgresql_connection_string": true,
+    "connectionString": "Server=db.internal.example.com;Port=5432;Database=appdb;User Id=appuser;Password=JsonDbP@ssw0rd!123;",
+    "host": "db.internal.example.com",
+    "port": 5432,
+    "name": "appdb",
+    "MANIFEST_ID_61_db_password": true,
+    "password": "JsonDbP@ssw0rd!123"
+  },
+  "aws": {
+    "MANIFEST_ID_62_access_key": true,
+    "accessKeyId": "AKIAIOSFODNN7FAKEJSN",
+    "MANIFEST_ID_63_secret_key": true,
+    "secretAccessKey": "JsonAwsSecretKey/bPxRfiCYEXAMPLEKEY/FakeValue"
+  },
+  "integrations": {
+    "stripe": {
+      "MANIFEST_ID_64_stripe_secret": true,
+      "secretKey": "sk_test_51JsonFakeStripeTestKeyABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcd"
+    },
+    "twilio": {
+      "MANIFEST_ID_65_twilio_sid": true,
+      "accountSid": "ACjson1234567890abcdef1234567890ab",
+      "MANIFEST_ID_66_twilio_token": true,
+      "authToken": "json1234567890abcdef1234567890ab12"
+    },
+    "github": {
+      "MANIFEST_ID_67_github_pat": true,
+      "personalAccessToken": "ghp_JsonGitHubPatFakeToken1234567890ABCDE"
+    },
+    "mailgun": {
+      "MANIFEST_ID_68_mailgun_key": true,
+      "apiKey": "key-json1234567890abcdef1234567890ab"
+    }
+  },
+  "docker": {
+    "MANIFEST_ID_69_docker_creds": true,
+    "registryUsername": "myregistry",
+    "registryPassword": "JsonDockerRegistryP@ssword!123",
+    "registryServer": "registry.example.com"
+  }
+}

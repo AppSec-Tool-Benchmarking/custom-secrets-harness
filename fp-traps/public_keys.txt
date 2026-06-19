@@ -1,0 +1,33 @@
+# public_keys.txt
+# TEST HARNESS - FALSE POSITIVE TRAPS
+#
+# These are SSH PUBLIC keys. They are NOT secrets.
+# Tools should NOT flag public keys — only private keys are sensitive.
+#
+# If a tool flags any key in this file, it is generating a FALSE POSITIVE.
+# See secrets-manifest.csv (is_fp_trap = true) for ground truth.
+
+# --- MANIFEST FP-12 ---
+# RSA Public Key (2048-bit) — NOT a secret
+-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2a2rwplBQLzHPZe5RJr9
+vA3ynLMnHpPtMXEFtEpBmifSsRKiFakePublicKeyLineABCDEFGHIJKLMNOPQRST
+UVWXYZabcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTfake
+IDAQAB
+-----END PUBLIC KEY-----
+
+# --- MANIFEST FP-13 ---
+# SSH Public Key (RSA) in authorized_keys format — NOT a secret
+ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC2a2rwplFakePublicKeyDataABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOP user@hostname
+
+# --- MANIFEST FP-14 ---
+# SSH Public Key (ED25519) — NOT a secret
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFakeED25519PublicKeyDataABCDEFGHIJKLMNOP user@hostname
+
+# --- MANIFEST FP-15 ---
+# PGP Public Key — NOT a secret
+-----BEGIN PGP PUBLIC KEY BLOCK-----
+mQENBFakePublicKeyBlock1234ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijkl
+mnopqrstuvwxyz0123456789FakeLineABCDEFGHIJKLMNOPQRSTUVWXYZabcdef
+=FkAB
+-----END PGP PUBLIC KEY BLOCK-----

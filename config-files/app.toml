@@ -1,0 +1,35 @@
+# app.toml
+# TEST HARNESS: All credential values below are FAKE for secrets detection benchmarking.
+# See secrets-manifest.csv for ground truth.
+
+[app]
+name = "MyApplication"
+environment = "production"
+debug = false
+
+[database]
+# --- MANIFEST ID 70 ---
+url = "postgresql://tomluser:Toml$DbP@ssword123!@postgres.prod.example.com:5432/myapp"
+max_connections = 20
+
+[aws]
+# --- MANIFEST ID 71 ---
+access_key_id = "AKIAJ3FADKTOML7FAKE4"
+# --- MANIFEST ID 72 ---
+secret_access_key = "TomlAwsSecretKeyFakeValue/bPxRfiCY12345EXAMPLE"
+region = "eu-west-1"
+
+[stripe]
+# --- MANIFEST ID 73 ---
+secret_key = "sk_live_51TomlFakeStripeSecretKeyFromTomlABCDEFGHIJKLMNOPQRSTUVWXYZ0123"
+publishable_key = "pk_live_51TomlFakeStripePublishableKeyABCDEFGHIJKLMNOPQRSTUVWXYZ012"
+
+[redis]
+# --- MANIFEST ID 74 ---
+password = "TomlR3d1sP@ssword!456"
+host = "redis.prod.example.com"
+port = 6379
+
+[monitoring]
+# --- MANIFEST ID 75 ---
+sentry_dsn = "https://toml_fake_sentry_key_abcdef1234@o123456.ingest.sentry.io/1234567"

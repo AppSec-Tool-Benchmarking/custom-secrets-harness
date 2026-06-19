@@ -1,0 +1,47 @@
+# config.yaml
+# TEST HARNESS: All credential values below are FAKE for secrets detection benchmarking.
+# See secrets-manifest.csv for ground truth.
+
+app:
+  name: MyApplication
+  environment: production
+  port: 8080
+
+database:
+  # --- MANIFEST ID 52 ---
+  url: "postgresql://dbuser:Yaml$DbPassword!123@postgres.internal:5432/production"
+  pool_size: 10
+  ssl: true
+
+aws:
+  # --- MANIFEST ID 53 ---
+  access_key_id: "AKIAI44QH8DHBEXFAKY3"
+  # --- MANIFEST ID 54 ---
+  secret_access_key: "je7MtGbClwBF/2Zp9Utk/h3yCo8nvbEXAMPLFAKY"
+  region: "us-west-2"
+  s3_bucket: "my-app-data"
+
+stripe:
+  # --- MANIFEST ID 55 ---
+  secret_key: "sk_live_51YamlFakeStripeSecretKeyABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcde"
+  # --- MANIFEST ID 56 ---
+  webhook_secret: "whsec_YamlFakeWebhookSecret1234ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef"
+
+email:
+  provider: sendgrid
+  # --- MANIFEST ID 57 ---
+  api_key: "SG.YamlSendGridKey12345678.YamlSendGridSecondSegmentABCDEFGHIJKLMNOPQ"
+  from_address: noreply@example.com
+
+slack:
+  # --- MANIFEST ID 58 ---
+  webhook_url: "https://hooks.slack.com/services/T11111111/B11111111/YamlFakeWebhookTokenABCDEFG"
+
+monitoring:
+  # --- MANIFEST ID 59 ---
+  datadog_api_key: "yaml_fake_datadog_api_key_abcdef1234567890abcdef1234567890"
+  datadog_app_key: "yaml_fake_datadog_app_key_abcdef1234567890abcdef"
+
+logging:
+  level: info
+  format: json

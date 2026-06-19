@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  TEST HARNESS: All credential values below are FAKE for secrets detection benchmarking.
+  See secrets-manifest.csv for ground truth.
+-->
+<configuration>
+  <appSettings>
+    <!-- Not a secret -->
+    <add key="AppName" value="MyApplication"/>
+    <add key="Environment" value="Production"/>
+
+    <!-- MANIFEST ID 76: AWS Access Key in XML attribute -->
+    <add key="AWS_ACCESS_KEY_ID" value="AKIAIOSFODNN7FAKEXML"/>
+
+    <!-- MANIFEST ID 77: AWS Secret Key in XML -->
+    <add key="AWS_SECRET_ACCESS_KEY" value="XmlAwsSecretKeyFakeValue/bPxRfiCYEXAMPLEKEY"/>
+
+    <!-- MANIFEST ID 78: Database connection string -->
+    <add key="ConnectionStrings:DefaultConnection"
+         value="Server=sql.internal.example.com;Database=AppDb;User Id=sqladmin;Password=XmlSqlP@ssword!789;"/>
+
+    <!-- MANIFEST ID 79: Stripe API key -->
+    <add key="Stripe:SecretKey" value="sk_live_51XmlFakeStripeSecretKeyABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"/>
+
+    <!-- MANIFEST ID 80: Azure storage key in XML -->
+    <add key="Azure:StorageConnectionString"
+         value="DefaultEndpointsProtocol=https;AccountName=xmlstorage;AccountKey=XmlFakeAzureStorageKeyBase64ABCDEFGHIJKLMNOPQRSTUVWXYZ0123==;EndpointSuffix=core.windows.net"/>
+  </appSettings>
+
+  <connectionStrings>
+    <!-- MANIFEST ID 81: ADO.NET connection string element -->
+    <add name="MainDatabase"
+         connectionString="Data Source=sql.internal.example.com;Initial Catalog=AppDb;User ID=sqladmin;Password=XmlAdoNetP@ssword!101;"
+         providerName="System.Data.SqlClient"/>
+  </connectionStrings>
+</configuration>

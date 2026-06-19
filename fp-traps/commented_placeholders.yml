@@ -1,0 +1,35 @@
+# commented_placeholders.yml
+# TEST HARNESS - FALSE POSITIVE TRAPS
+#
+# These are commented-out placeholders and documentation examples.
+# Tools should NOT flag these.
+#
+# If a tool flags any entry in this file, it is generating a FALSE POSITIVE.
+# See secrets-manifest.csv (is_fp_trap = true) for ground truth.
+
+# Example configuration — replace all values before deploying
+# --- MANIFEST FP-16 ---
+example_config:
+  # aws_access_key_id: "YOUR_ACCESS_KEY_ID"
+  # aws_secret_access_key: "YOUR_SECRET_ACCESS_KEY"
+  # stripe_key: "<YOUR_STRIPE_SECRET_KEY>"
+  # database_password: "REPLACE_WITH_STRONG_PASSWORD"
+
+# Documentation snippet showing structure — not real values
+# --- MANIFEST FP-17 ---
+# database:
+#   url: "postgresql://user:password@host:5432/dbname"
+#   password: "supersecretpassword"  # Replace this before deploying!
+
+# This shows the pattern but uses a clearly fake value
+# stripe:
+#   secret_key: "sk_live_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+
+# --- MANIFEST FP-18 ---
+# Variables that reference env vars (not hardcoded secrets)
+production:
+  aws_access_key_id: ${AWS_ACCESS_KEY_ID}
+  aws_secret_access_key: ${AWS_SECRET_ACCESS_KEY}
+  stripe_secret_key: ${STRIPE_SECRET_KEY}
+  database_url: ${DATABASE_URL}
+  jwt_secret: ${JWT_SECRET}

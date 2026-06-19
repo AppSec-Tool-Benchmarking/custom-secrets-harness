@@ -1,0 +1,46 @@
+name: Deploy to Production
+# TEST HARNESS: This file intentionally contains hardcoded secrets in GitHub Actions workflow
+# for secrets detection tool benchmarking. All credentials are FAKE.
+# See secrets-manifest.csv for ground truth.
+
+on:
+  workflow_dispatch:
+
+env:
+  # --- MANIFEST ID 110 ---
+  AWS_ACCESS_KEY_ID: AKIAIOSFODNN7FAKEGHA
+  # --- MANIFEST ID 111 ---
+  AWS_SECRET_ACCESS_KEY: GitHubActionsSecretKey/bPxRfiCYEXAMPLEKEY/GHA
+  # Not a secret
+  AWS_DEFAULT_REGION: us-east-1
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (hardcoded — bad practice)
+        run: |
+          aws configure set aws_access_key_id AKIAIOSFODNN7FAKEGHA
+          aws configure set aws_secret_access_key GitHubActionsSecretKey/bPxRfiCYEXAMPLEKEY/GHA
+
+      - name: Deploy application
+        env:
+          # --- MANIFEST ID 112 ---
+          STRIPE_SECRET_KEY: sk_live_51GHAFakeStripeKeyABCDEFGHIJKLMNOPQRSTUVWXYZ0123456
+          # --- MANIFEST ID 113 ---
+          DATABASE_URL: postgresql://ghauser:GHADbP@ssword!111@db.prod:5432/appdb
+          # --- MANIFEST ID 114 ---
+          SLACK_WEBHOOK_URL: https://hooks.slack.com/services/T22222222/B22222222/GHAFakeWebhookTokenXYZ
+        run: |
+          echo "Deploying..."
+          ./scripts/deploy.sh
+
+      - name: Send notification
+        run: |
+          # --- MANIFEST ID 115 ---
+          # Token hardcoded directly in run step
+          curl -H "Authorization: token ghp_GHAFakeGitHubTokenInRun1234567890AB" \
+               https://api.github.com/repos/myorg/myrepo/deployments

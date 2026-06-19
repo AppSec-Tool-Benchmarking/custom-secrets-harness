@@ -1,0 +1,31 @@
+name: Release
+# TEST HARNESS: Fake secrets in release workflow
+# See secrets-manifest.csv for ground truth.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Publish to NPM
+        env:
+          # --- MANIFEST ID 116 ---
+          NPM_TOKEN: npm_GHAReleaseNpmFakeToken1234567890abcdefABCD
+          # --- MANIFEST ID 117 ---
+          PYPI_TOKEN: pypi-GHAReleaseFakePyPIToken1234567890abcdefghijklmn
+
+        run: |
+          echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+          npm publish
+
+      - name: Create GitHub Release
+        env:
+          # --- MANIFEST ID 118 ---
+          GH_RELEASE_TOKEN: ghp_GHAReleaseGitHubToken1234567890ABCDEF
+
+        run: |
+          gh release create v1.0.0 --notes "Release notes"

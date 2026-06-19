@@ -1,0 +1,54 @@
+# docker-compose.yml
+# TEST HARNESS: This file intentionally contains hardcoded secrets in environment blocks
+# for secrets detection tool benchmarking. All credentials are FAKE.
+# See secrets-manifest.csv for ground truth.
+
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      # --- MANIFEST ID 97 ---
+      - AWS_ACCESS_KEY_ID=AKIAIOSFODNN7FAKEDKC
+      # --- MANIFEST ID 98 ---
+      - AWS_SECRET_ACCESS_KEY=DockerComposeSecretKey/bPxRfiCYEXAMPLEKEY/DC
+      # --- MANIFEST ID 99 ---
+      - DATABASE_URL=postgresql://composeuser:ComposeDbP@ssword!555@postgres:5432/appdb
+      # --- MANIFEST ID 100 ---
+      - STRIPE_SECRET_KEY=sk_live_51ComposeFakeStripeKeyABCDEFGHIJKLMNOPQRSTUVWXYZ012345
+      # --- MANIFEST ID 101 ---
+      - JWT_SECRET=compose_jwt_secret_hardcoded_do_not_use_in_production_2024
+      # --- MANIFEST ID 102 ---
+      - SENDGRID_API_KEY=SG.ComposeKey12345678.ComposeSecondSegmentABCDEFGHIJKLMNO
+      # Not secrets
+      - NODE_ENV=production
+      - PORT=8080
+    depends_on:
+      - postgres
+      - redis
+
+  postgres:
+    image: postgres:15
+    environment:
+      # --- MANIFEST ID 103 ---
+      - POSTGRES_PASSWORD=ComposePostgresRootP@ssword!
+      - POSTGRES_USER=composeuser
+      - POSTGRES_DB=appdb
+
+  redis:
+    image: redis:7
+    command: >
+      redis-server
+      --requirepass ComposeRedisP@ssword!789
+    # --- MANIFEST ID 104 ---
+    # Note: password above on the command line (manifest ID 104)
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro

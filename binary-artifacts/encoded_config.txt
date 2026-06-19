@@ -1,0 +1,19 @@
+# encoded_config.txt
+# TEST HARNESS: This file simulates a binary artifact / config dump that contains
+# base64-encoded secrets. Some tools can detect secrets in binary/encoded files.
+# See secrets-manifest.csv for ground truth.
+
+# --- MANIFEST ID 147 ---
+# Simulated kubeconfig with embedded credentials (base64-encoded as Kubernetes does it)
+# This represents a kubeconfig certificate-authority-data or token field
+# The "certificate-data" field contains a fake base64 token
+KUBECONFIG_TOKEN=a2ViZXJuZXRlc19mYWtlX3NlcnZpY2VfYWNjb3VudF90b2tlbl9kb19ub3RfdXNlX2luX3Byb2R1Y3Rpb24=
+
+# --- MANIFEST ID 148 ---
+# Terraform state file fragment — TF state can contain plaintext secrets
+# Simulates what terraform.tfstate looks like when it stores sensitive values
+TERRAFORM_STATE_FRAGMENT=eyJyZXNvdXJjZXMiOlt7InR5cGUiOiJhd3NfZGJfaW5zdGFuY2UiLCJhdHRyaWJ1dGVzIjp7InBhc3N3b3JkIjoiVGVycmFmb3JtU3RhdGVGYWtlUGFzc3dvcmQhMTIzIn19XX0=
+
+# --- MANIFEST ID 149 ---
+# Docker registry auth config (base64 of "user:password")
+DOCKER_AUTH_CONFIG=eyJhdXRocyI6eyJyZWdpc3RyeS5leGFtcGxlLmNvbSI6eyJhdXRoIjoiWm1GclpYVnpaWEk2Um1GclpVUnZZMnRsY2xKbFoybHZiakV5TXc9PSJ9fX0=

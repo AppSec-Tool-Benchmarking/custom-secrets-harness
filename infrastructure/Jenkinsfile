@@ -1,0 +1,49 @@
+// Jenkinsfile
+// TEST HARNESS: This file intentionally contains hardcoded secrets in pipeline config
+// for secrets detection tool benchmarking. All credentials are FAKE.
+// See secrets-manifest.csv for ground truth.
+
+pipeline {
+    agent any
+
+    environment {
+        // --- MANIFEST ID 105 ---
+        AWS_ACCESS_KEY_ID = 'AKIAIOSFODNN7FAKEJNK'
+        // --- MANIFEST ID 106 ---
+        AWS_SECRET_ACCESS_KEY = 'JenkinsSecretKey/bPxRfiCYEXAMPLEKEY/FAKE'
+        // --- MANIFEST ID 107 ---
+        DEPLOY_SSH_KEY = 'jenkins_fake_ssh_private_key_for_deployment_abc123def456'
+        // --- MANIFEST ID 108 ---
+        DOCKER_REGISTRY_PASSWORD = 'JenkinsDockerRegistryP@ssword!ABC'
+        // Not secrets
+        APP_NAME = 'my-application'
+        DEPLOY_ENV = 'production'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Build') {
+            steps {
+                sh 'mvn clean package -DskipTests'
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                withCredentials([string(credentialsId: 'stripe-key', variable: 'STRIPE_KEY')]) {
+                    sh """
+                        # --- MANIFEST ID 109 ---
+                        # Hardcoded token in shell step (bad pattern)
+                        export GITHUB_TOKEN=ghp_JenkinsFakeGitHubToken1234567890ABCDEF
+                        ./deploy.sh --env production
+                    """
+                }
+            }
+        }
+    }
+}
