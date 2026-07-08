@@ -6,9 +6,6 @@
 #   Security > Vulnerability Report  (if GitLab Ultimate)
 #   Pipeline > secret_detection job > Artifacts > gl-secret-detection-report.json  (all tiers)
 
-stages:
-  - secret-detection
-
 include:
   - template: Security/Secret-Detection.gitlab-ci.yml
 
