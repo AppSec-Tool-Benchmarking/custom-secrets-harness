@@ -1,0 +1,15 @@
+# results/ — benchmark scan outputs (findings + scorecards)
+# These are local-only: they contain real-format-fake secrets in tool output
+# and are benchmark data, not source code.
+results/
+
+# Tool cache files
+.cache_ggshield
+*.pyc
+__pycache__/
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+.coverage
+htmlcov/
