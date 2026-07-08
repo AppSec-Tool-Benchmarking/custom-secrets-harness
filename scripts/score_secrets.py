@@ -12,6 +12,7 @@ Supports output from:
   - Detect-Secrets JSON  (detect-secrets scan ... > findings.json)
   - Semgrep       JSON   (semgrep --config p/secrets --json > findings.json ...)
   - GitGuardian   JSON   (ggshield secret scan repo --json ... > findings.json)
+  - GitLab SD     JSON   (gl-secret-detection-report.json artifact from CI pipeline)
 
 Usage:
     python3 score_secrets.py \\
@@ -65,12 +66,13 @@ from collections import defaultdict
 
 TOOLS = {
     "gitleaks":       {"fmt": "gitleaks-json",        "ext": "json"},
-    "betterleaks":    {"fmt": "gitleaks-json",         "ext": "json"},   # identical schema
+    "betterleaks":    {"fmt": "gitleaks-json",         "ext": "json"},
     "trufflehog":     {"fmt": "trufflehog-jsonl",      "ext": "jsonl"},
     "kingfisher":     {"fmt": "kingfisher-jsonl",      "ext": "jsonl"},
     "detect-secrets": {"fmt": "detect-secrets-json",   "ext": "json"},
     "semgrep":        {"fmt": "semgrep-json",          "ext": "json"},
     "gitguardian":    {"fmt": "ggshield-json",         "ext": "json"},
+    "gitlab-sd":      {"fmt": "gitlab-sd-json",        "ext": "json"},
 }
 
 
@@ -289,14 +291,38 @@ def parse_ggshield_json(findings_path):
     return results
 
 
+def parse_gitlab_sd_json(findings_path):
+    """
+    GitLab Secret Detection report: gl-secret-detection-report.json
+    Structure: { "vulnerabilities": [ { "location": { "file": str, "start_line": int,
+                "commit": { "sha": str } }, ... } ] }
+    File paths are repo-relative (no leading slash).
+    History findings have a non-HEAD commit sha in location.commit.sha.
+    """
+    with open(findings_path) as f:
+        data = json.load(f)
+    results = []
+    for item in data.get("vulnerabilities", []):
+        loc         = item.get("location", {})
+        file_path   = loc.get("file", "")
+        line_number = loc.get("start_line")
+        results.append({
+            "file_path":   file_path,
+            "line_number": int(line_number) if line_number else None,
+            "raw":         item,
+        })
+    return results
+
+
 PARSERS = {
     "gitleaks-json":          parse_gitleaks_json,
-    "betterleaks-json":       parse_gitleaks_json,   # same schema
+    "betterleaks-json":       parse_gitleaks_json,
     "trufflehog-jsonl":       parse_trufflehog_jsonl,
     "kingfisher-jsonl":       parse_kingfisher_jsonl,
     "detect-secrets-json":    parse_detect_secrets_json,
     "semgrep-json":           parse_semgrep_json,
     "ggshield-json":          parse_ggshield_json,
+    "gitlab-sd-json":         parse_gitlab_sd_json,
 }
 
 
@@ -538,6 +564,7 @@ ALL_TOOL_CONFIGS = [
     {"name": "detect-secrets", "fmt": "detect-secrets-json",   "file": "findings.json"},
     {"name": "semgrep",        "fmt": "semgrep-json",          "file": "findings.json"},
     {"name": "gitguardian",    "fmt": "ggshield-json",         "file": "findings.json"},
+    {"name": "gitlab-sd",      "fmt": "gitlab-sd-json",        "file": "findings.json"},
 ]
 
 
