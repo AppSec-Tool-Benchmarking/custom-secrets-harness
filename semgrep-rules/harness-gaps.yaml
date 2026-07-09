@@ -1,0 +1,176 @@
+# =============================================================================
+# Semgrep Custom Rules — Secrets Detection Gap Coverage
+# /custom-secrets-harness/semgrep-rules/harness-gaps.yaml
+#
+# These rules use pattern-regex with languages: [generic] to match secrets
+# across all file types regardless of language. They cover providers with
+# 0% or low TPR in the default p/secrets scan.
+#
+# Usage:
+#   semgrep --config semgrep-rules/ --config "p/secrets" \
+#       --json --quiet /path/to/repo > findings.json
+#
+# Free tier: YES — local custom YAML rules require no Semgrep account.
+# Validators (live API verification) require the paid AppSec Platform.
+# =============================================================================
+
+rules:
+
+  # ---------------------------------------------------------------------------
+  # Redis — connection string with embedded password
+  # ---------------------------------------------------------------------------
+  - id: custom-redis-uri-credentials
+    severity: ERROR
+    languages: [generic]
+    pattern-regex: 'redis[s]?://(?:[^\s:@]+:)?([^\s@]{6,})@[^\s/]+'
+    message: "Redis connection string with embedded credentials"
+    metadata:
+      category: security
+      secret_type: redis_connection_string
+      confidence: HIGH
+
+  # ---------------------------------------------------------------------------
+  # Datadog API key
+  # ---------------------------------------------------------------------------
+  - id: custom-datadog-api-key
+    severity: ERROR
+    languages: [generic]
+    patterns:
+      - pattern-regex: '(?i)(?:datadog[_\-]?api[_\-]?key|DD_API_KEY)\s*[=:]\s*["\x27]?([a-zA-Z0-9_]{20,})["\x27]?'
+    message: "Datadog API key"
+    metadata:
+      category: security
+      secret_type: datadog_api_key
+      confidence: MEDIUM
+
+  # ---------------------------------------------------------------------------
+  # Mailgun API key
+  # ---------------------------------------------------------------------------
+  - id: custom-mailgun-api-key
+    severity: ERROR
+    languages: [generic]
+    pattern-regex: '(?i)(?:mailgun[_\-]?(?:api[_\-]?)?key|MAILGUN_API_KEY)\s*[=:]\s*["\x27]?(key-[a-f0-9]{32})["\x27]?'
+    message: "Mailgun API key"
+    metadata:
+      category: security
+      secret_type: mailgun_api_key
+      confidence: HIGH
+
+  # ---------------------------------------------------------------------------
+  # PyPI token (generic prefix, not just real-format)
+  # ---------------------------------------------------------------------------
+  - id: custom-pypi-token
+    severity: ERROR
+    languages: [generic]
+    pattern-regex: '\b(pypi-[A-Za-z0-9_\-]{40,})\b'
+    message: "PyPI API token"
+    metadata:
+      category: security
+      secret_type: pypi_token
+      confidence: HIGH
+
+  # ---------------------------------------------------------------------------
+  # Terraform Cloud token (variable = value format)
+  # ---------------------------------------------------------------------------
+  - id: custom-terraform-cloud-token
+    severity: ERROR
+    languages: [generic]
+    pattern-regex: '(?i)(?:terraform[_\-]?(?:cloud[_\-]?)?token|TFC_TOKEN|TF_TOKEN)\s*[=:]\s*["\x27]?([A-Za-z0-9]{10,}\.[A-Za-z0-9]{8,})["\x27]?'
+    message: "Terraform Cloud token"
+    metadata:
+      category: security
+      secret_type: terraform_cloud_token
+      confidence: HIGH
+
+  # ---------------------------------------------------------------------------
+  # Sentry DSN (URL format)
+  # ---------------------------------------------------------------------------
+  - id: custom-sentry-dsn
+    severity: ERROR
+    languages: [generic]
+    pattern-regex: 'https://[A-Za-z0-9_]{8,64}@o\d{4,}\.ingest\.sentry\.io/\d{4,}'
+    message: "Sentry DSN with embedded key"
+    metadata:
+      category: security
+      secret_type: sentry_dsn
+      confidence: HIGH
+
+  # ---------------------------------------------------------------------------
+  # OpenAI API key (mixed-case variant missed by p/secrets)
+  # ---------------------------------------------------------------------------
+  - id: custom-openai-api-key
+    severity: ERROR
+    languages: [generic]
+    pattern-regex: '\b(sk-[A-Za-z0-9]{48,56})\b'
+    message: "OpenAI API key"
+    metadata:
+      category: security
+      secret_type: openai_api_key
+      confidence: HIGH
+
+  # ---------------------------------------------------------------------------
+  # npm auth token
+  # ---------------------------------------------------------------------------
+  - id: custom-npm-auth-token
+    severity: ERROR
+    languages: [generic]
+    pattern-regex: '\b(npm_[A-Za-z0-9]{36,})\b'
+    message: "npm auth token"
+    metadata:
+      category: security
+      secret_type: npm_auth_token
+      confidence: HIGH
+
+  # ---------------------------------------------------------------------------
+  # Azure Storage connection string
+  # ---------------------------------------------------------------------------
+  - id: custom-azure-storage-connstr
+    severity: ERROR
+    languages: [generic]
+    pattern-regex: 'DefaultEndpointsProtocol=https;AccountName=[^;]+;AccountKey=[A-Za-z0-9+/=]{60,};'
+    message: "Azure Storage connection string with account key"
+    metadata:
+      category: security
+      secret_type: azure_storage_connection_string
+      confidence: HIGH
+
+  # ---------------------------------------------------------------------------
+  # Azure client secret (variable assignment)
+  # ---------------------------------------------------------------------------
+  - id: custom-azure-client-secret
+    severity: ERROR
+    languages: [generic]
+    pattern-regex: '(?i)(?:azure[_\-]?client[_\-]?secret|client[_\-]?secret)\s*[=:]\s*["\x27]?([A-Za-z0-9\-_~.]{34,40})["\x27]?'
+    message: "Azure AD client secret"
+    metadata:
+      category: security
+      secret_type: azure_client_secret
+      confidence: MEDIUM
+
+  # ---------------------------------------------------------------------------
+  # GCP API key (AIza prefix)
+  # ---------------------------------------------------------------------------
+  - id: custom-gcp-api-key
+    severity: ERROR
+    languages: [generic]
+    pattern-regex: '\b(AIza[A-Za-z0-9\-_]{35})\b'
+    message: "Google Cloud API key"
+    metadata:
+      category: security
+      secret_type: gcp_api_key
+      confidence: HIGH
+
+  # ---------------------------------------------------------------------------
+  # Kubernetes service account JWT in encoded artifacts
+  # ---------------------------------------------------------------------------
+  - id: custom-kubernetes-jwt-token
+    severity: ERROR
+    languages: [generic]
+    patterns:
+      - pattern-regex: '(?i)(?:kubernetes|k8s|serviceaccount|kubeconfig)'
+      - pattern-regex: 'eyJ[A-Za-z0-9_\-]{10,}\.eyJ[A-Za-z0-9_\-]{10,}\.[A-Za-z0-9_\-]{20,}'
+    message: "Kubernetes service account token (JWT)"
+    metadata:
+      category: security
+      secret_type: kubernetes_service_account_token
+      confidence: MEDIUM

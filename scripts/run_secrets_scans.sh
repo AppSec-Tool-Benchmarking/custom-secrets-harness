@@ -210,12 +210,16 @@ run_detect_secrets() {
     log "detect-secrets $version — scanning $repo"
     mkdir -p "$out/detect-secrets"
 
-    # detect-secrets only scans HEAD; --all-files includes untracked
-    detect-secrets scan \
+    # Must run from inside the repo so paths in the baseline are repo-relative.
+    # Exclude results/, scripts/, and tool cache dirs to avoid scanning findings files.
+    (cd "$repo" && detect-secrets scan \
         --all-files \
-        "$repo" \
+        --exclude-files "^results/" \
+        --exclude-files "^scripts/" \
+        --exclude-files "^\.cache_ggshield" \
+        . \
         >"$out/detect-secrets/findings.json" \
-        2>"$out/detect-secrets/scan.log" || true
+        2>"$out/detect-secrets/scan.log") || true
 
     local count; count=$(python3 -c "
 import json

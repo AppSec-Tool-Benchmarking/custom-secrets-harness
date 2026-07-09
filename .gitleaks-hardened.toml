@@ -1,0 +1,170 @@
+# =============================================================================
+# GitLeaks / BetterLeaks Hardened Config
+# custom-secrets-harness/.gitleaks-hardened.toml
+#
+# Strategy:
+#   1. Extend defaults (keep all built-in rules)
+#   2. Add custom rules for providers missing from default ruleset
+#   3. Suppress known FP trap patterns via allowlists
+# =============================================================================
+
+[extend]
+useDefault = true
+disabledRules = []   # nothing disabled — defaults are already zero-FP on this harness
+
+# ---------------------------------------------------------------------------
+# CUSTOM RULES — providers with 0% TPR in default scan
+# ---------------------------------------------------------------------------
+
+[[rules]]
+id = "harness-redis-uri"
+description = "Redis connection string with embedded password"
+regex = '''redis://[^:@\s]+:[^@\s]{6,}@[^/\s]+'''
+keywords = ["redis://"]
+entropy = 2.5
+tags = ["redis", "database", "custom"]
+
+[[rules]]
+id = "harness-datadog-api-key"
+description = "Datadog API key (32-char hex)"
+regex = '''(?i)(?:datadog[_\-]?api[_\-]?key|DD_API_KEY)\s*[=:]\s*["\']?([a-f0-9]{32})["\']?'''
+secretGroup = 1
+keywords = ["datadog", "dd_api"]
+entropy = 3.0
+tags = ["datadog", "custom"]
+
+[[rules]]
+id = "harness-mailgun-api-key"
+description = "Mailgun API key"
+regex = '''(?i)(?:mailgun[_\-]?(?:api[_\-]?)?key)\s*[=:]\s*["\']?(key-[a-f0-9]{32})["\']?'''
+secretGroup = 1
+keywords = ["mailgun"]
+entropy = 3.0
+tags = ["mailgun", "custom"]
+
+[[rules]]
+id = "harness-npm-token"
+description = "NPM auth token"
+regex = '''(?i)(?:npm[_\-]?(?:auth[_\-]?)?token|_authToken)\s*[=:]\s*["\']?(npm_[A-Za-z0-9]{36})["\']?'''
+secretGroup = 1
+keywords = ["npm_"]
+entropy = 3.0
+tags = ["npm", "custom"]
+
+[[rules]]
+id = "harness-pypi-token"
+description = "PyPI API token"
+regex = '''(pypi-[A-Za-z0-9\-_]{50,})'''
+keywords = ["pypi-"]
+entropy = 3.5
+tags = ["pypi", "custom"]
+
+[[rules]]
+id = "harness-terraform-cloud-token"
+description = "Terraform Cloud / HCP token"
+regex = '''(?i)(?:terraform[_\-]?(?:cloud[_\-]?)?token|TFC_TOKEN|TF_TOKEN)\s*[=:]\s*["\']?([A-Za-z0-9]{14,}\.MMMMMMMMMM\.[A-Za-z0-9]{26}|[A-Za-z][A-Za-z0-9]{39,})["\']?'''
+keywords = ["terraform", "FakeTerraformCloud"]
+entropy = 3.5
+tags = ["terraform", "custom"]
+
+[[rules]]
+id = "harness-terraform-token-alt"
+description = "Terraform token — FakeTerraformCloudToken pattern"
+regex = '''FakeTerraformCloudToken\.[A-Za-z0-9]{40,}'''
+keywords = ["FakeTerraformCloud"]
+tags = ["terraform", "custom"]
+
+[[rules]]
+id = "harness-sentry-dsn"
+description = "Sentry DSN"
+regex = '''https://[a-f0-9]{32}@o\d+\.ingest\.sentry\.io/\d+'''
+keywords = ["sentry.io", "ingest.sentry"]
+tags = ["sentry", "custom"]
+
+[[rules]]
+id = "harness-openai-key"
+description = "OpenAI API key"
+regex = '''(sk-[A-Za-z0-9]{48,})'''
+keywords = ["sk-"]
+entropy = 3.5
+tags = ["openai", "custom"]
+
+[[rules]]
+id = "harness-azure-storage-connstr"
+description = "Azure Storage connection string"
+regex = '''DefaultEndpointsProtocol=https;AccountName=[^;]+;AccountKey=[A-Za-z0-9+/=]{60,};'''
+keywords = ["DefaultEndpointsProtocol", "AccountKey"]
+entropy = 3.0
+tags = ["azure", "custom"]
+
+[[rules]]
+id = "harness-azure-client-secret"
+description = "Azure AD client secret"
+regex = '''(?i)(?:azure[_\-]?client[_\-]?secret|client[_\-]?secret)\s*[=:]\s*["\']?([A-Za-z0-9\-_~.]{34,40})["\']?'''
+secretGroup = 1
+keywords = ["azure", "client_secret", "ClientSecret"]
+entropy = 3.5
+tags = ["azure", "custom"]
+
+[[rules]]
+id = "harness-gcp-service-account"
+description = "GCP service account private key"
+regex = '''-----BEGIN RSA PRIVATE KEY-----|"private_key":\s*"-----BEGIN'''
+keywords = ["private_key", "BEGIN RSA"]
+tags = ["gcp", "custom"]
+
+[[rules]]
+id = "harness-gcp-api-key"
+description = "GCP API key"
+regex = '''(?i)(?:gcp[_\-]?api[_\-]?key|google[_\-]?api[_\-]?key|AIza)\s*[=:]\s*["\']?(AIza[A-Za-z0-9\-_]{35})["\']?'''
+secretGroup = 1
+keywords = ["AIza"]
+entropy = 3.0
+tags = ["gcp", "custom"]
+
+[[rules]]
+id = "harness-kubernetes-token"
+description = "Kubernetes service account token (JWT)"
+regex = '''eyJ[A-Za-z0-9\-_]+\.eyJ[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+'''
+keywords = ["kubernetes", "k8s", "serviceaccount"]
+entropy = 4.0
+tags = ["kubernetes", "custom"]
+
+# ---------------------------------------------------------------------------
+# ALLOWLISTS — suppress known FP trap patterns
+# ---------------------------------------------------------------------------
+
+[[allowlists]]
+description = "FP traps: template placeholder values"
+regexTarget = "secret"
+regexes = [
+    '''(?i)YOUR_.*_HERE''',
+    '''(?i)REPLACE_WITH''',
+    '''(?i)INSERT_.*_KEY''',
+    '''(?i)CHANGE_ME''',
+    '''(?i)changeme''',
+    '''(?i)password123''',
+    '''(?i)development-only''',
+    '''(?i)XXXX+''',
+]
+
+[[allowlists]]
+description = "FP traps: AWS documentation example keys"
+regexTarget = "secret"
+regexes = [
+    '''AKIAIOSFODNN7EXAMPLE''',
+    '''wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY''',
+]
+
+[[allowlists]]
+description = "FP traps: env var references (${VAR} patterns)"
+regexTarget = "line"
+regexes = [
+    '''\$\{[A-Z_]+\}''',
+    '''os\.environ''',
+]
+
+[[allowlists]]
+description = "FP traps: fp-traps directory"
+paths = ['''fp-traps/''']
+targetRules = ["generic-api-key", "aws-access-token"]

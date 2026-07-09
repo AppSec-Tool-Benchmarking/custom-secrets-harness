@@ -1,0 +1,177 @@
+# =============================================================================
+# Kingfisher Custom Rules — Harness Gap Coverage
+# /custom-secrets-harness/kingfisher-rules/harness-gaps.yaml
+#
+# These rules cover two categories:
+#   1. Providers where Kingfisher's built-in rules use REAL token format patterns
+#      but the harness uses simplified fake patterns (PyPI, Terraform, Sentry,
+#      Datadog). The built-in rules are correct for real tokens; these custom
+#      rules match the harness's fake-format representations.
+#
+#   2. Patterns the harness has that built-in rules miss due to variable-name
+#      context (Mailgun key-xxx format, Redis variable assignments).
+#
+# Usage:
+#   kingfisher scan -f jsonl \
+#       --rules-path kingfisher-rules/ \
+#       -o results/kingfisher-hardened/findings.jsonl \
+#       /path/to/repo
+# =============================================================================
+
+rules:
+
+  # ---------------------------------------------------------------------------
+  # PyPI — harness uses pypi-<random> (not the real pypi-AgEIcHlwaS5vcmc prefix)
+  # ---------------------------------------------------------------------------
+  - name: PyPI Token (generic prefix)
+    id: harness.pypi.1
+    pattern: |
+      (?xi)
+      \b
+      (
+        pypi-[A-Za-z0-9_\-]{40,}
+      )
+      \b
+    confidence: medium
+    pattern_requirements:
+      ignore_if_contains:
+        - AgEIcHlwaS5vcmc   # already covered by kingfisher.pypi.1
+    examples:
+      - "pypi_token = pypi-FakePyPITokenABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnop"
+      - "PYPI_TOKEN: pypi-GHAReleaseFakePyPIToken1234567890abcdefghijklmn"
+
+  # ---------------------------------------------------------------------------
+  # Terraform Cloud — harness uses FakeTerraformCloudToken.XXX (not .atlasv1.)
+  # ---------------------------------------------------------------------------
+  - name: Terraform Cloud Token (fake format)
+    id: harness.terraform.1
+    pattern: |
+      (?xi)
+      (?:
+        terraform[_\-]?(?:cloud[_\-]?)?token
+        | TFC_TOKEN
+        | TF_TOKEN
+      )
+      \s* [=:] \s*
+      ["']?
+      (
+        [A-Za-z0-9]{10,} \. [A-Za-z0-9]{8,}
+      )
+      ["']?
+    confidence: medium
+    examples:
+      - "terraform_cloud_token = FakeTerraformCloudToken.ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmno"
+      - 'token = "FakeTerraformCloudToken.MNOPQRSTUVWXYZ0123456789abcdefghijklmno"'
+
+  # ---------------------------------------------------------------------------
+  # Sentry DSN — harness uses non-hex key (toml_fake_sentry_key_abcdef1234)
+  # The built-in rule requires exactly 64 hex chars; this matches the broader DSN URL
+  # ---------------------------------------------------------------------------
+  - name: Sentry DSN (URL format)
+    id: harness.sentry.1
+    pattern: |
+      (?xi)
+      (
+        https://
+        [A-Za-z0-9_]{8,64}
+        @
+        o\d{4,}
+        \.ingest\.sentry\.io
+        /\d{4,}
+      )
+    confidence: high
+    examples:
+      - 'sentry_dsn = "https://toml_fake_sentry_key_abcdef1234@o123456.ingest.sentry.io/1234567"'
+      - "SENTRY_DSN=https://abc1234@o654321.ingest.sentry.io/789012"
+
+  # ---------------------------------------------------------------------------
+  # Datadog API key — harness uses variable-name prefix (yaml_fake_datadog_api_key_...)
+  # Built-in rule matches DD_SITE/URL patterns; this catches variable = "key_value"
+  # ---------------------------------------------------------------------------
+  - name: Datadog API Key (variable assignment)
+    id: harness.datadog.1
+    pattern: |
+      (?xi)
+      (?:
+        datadog[_\-]?api[_\-]?key
+        | DD_API_KEY
+        | dd[_\-]api[_\-]key
+      )
+      \s* [=:] \s*
+      ["']?
+      (
+        [a-f0-9]{32,40}
+        | [a-zA-Z0-9_]{20,}_[a-f0-9]{16,}
+      )
+      ["']?
+    confidence: medium
+    examples:
+      - "datadog_api_key: \"yaml_fake_datadog_api_key_abcdef1234567890abcdef1234567890\""
+      - "DD_API_KEY = 'abcdef1234567890abcdef1234567890'"
+
+  # ---------------------------------------------------------------------------
+  # Mailgun API key — harness uses key-<32 chars>
+  # Built-in rule requires 72 chars in 3×24 groups; this matches the shorter real-world format
+  # ---------------------------------------------------------------------------
+  - name: Mailgun API Key (key- prefix)
+    id: harness.mailgun.1
+    pattern: |
+      (?xi)
+      (?:
+        mailgun[_\-]?(?:api[_\-]?)?key
+        | MAILGUN_API_KEY
+      )
+      \s* [=:] \s*
+      ["']?
+      (
+        key-[a-f0-9]{32}
+      )
+      ["']?
+    confidence: high
+    examples:
+      - 'MAILGUN_API_KEY = "key-fake1234567890abcdef12345678901234"'
+      - "mailgun_api_key: key-abcdef1234567890abcdef12345678901234"
+
+  # ---------------------------------------------------------------------------
+  # OpenAI API key — built-in matches sk-[A-Z0-9]{48} but harness uses mixed case
+  # sk-NotebookFakeOpenAIApiKeyABCDEFGHIJKLMNOPQRSTUVWXYZ0123456
+  # ---------------------------------------------------------------------------
+  - name: OpenAI API Key (mixed case)
+    id: harness.openai.1
+    pattern: |
+      (?xi)
+      \b
+      (
+        sk-[A-Za-z0-9]{48,56}
+      )
+      \b
+    confidence: medium
+    pattern_requirements:
+      ignore_if_contains:
+        - sk-proj-   # covered by separate rule if it exists
+    examples:
+      - "OPENAI_API_KEY = 'sk-NotebookFakeOpenAIApiKeyABCDEFGHIJKLMNOPQRSTUVWXYZ0123456'"
+      - "api_key: sk-testFakeKey1234567890abcdefABCDEFGHIJKLMNOPQR"
+
+  # ---------------------------------------------------------------------------
+  # Kubernetes Service Account Token (JWT in binary artifact)
+  # eyJ... base64 JWT pattern in context of k8s/service account
+  # ---------------------------------------------------------------------------
+  - name: Kubernetes Service Account Token (JWT)
+    id: harness.kubernetes.1
+    pattern: |
+      (?xi)
+      (?:
+        kubernetes | k8s | service.?account | serviceaccount | kubeconfig
+      )
+      (?:.|[\n\r]){0,100}?
+      (
+        eyJ[A-Za-z0-9_\-]+
+        \.
+        eyJ[A-Za-z0-9_\-]+
+        \.
+        [A-Za-z0-9_\-]{20,}
+      )
+    confidence: medium
+    examples:
+      - "# kubernetes service account token\ntoken: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV"

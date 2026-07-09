@@ -13,6 +13,9 @@ Supports output from:
   - Semgrep       JSON   (semgrep --config p/secrets --json > findings.json ...)
   - GitGuardian   JSON   (ggshield secret scan repo --json ... > findings.json)
   - GitLab SD     JSON   (gl-secret-detection-report.json artifact from CI pipeline)
+  - GitHub SS     JSON   (fetched via GitHub Secret Scanning API + locations endpoint)
+  - Cycode        JSON   (parsed from Cycode CSV export via parse_cycode_csv.py)
+  - Checkmarx One JSON   (parsed from CxOne API results via parse_cxone_results.py)
 
 Usage:
     python3 score_secrets.py \\
@@ -73,6 +76,9 @@ TOOLS = {
     "semgrep":        {"fmt": "semgrep-json",          "ext": "json"},
     "gitguardian":    {"fmt": "ggshield-json",         "ext": "json"},
     "gitlab-sd":      {"fmt": "gitlab-sd-json",        "ext": "json"},
+    "github-ss":      {"fmt": "github-ss-json",        "ext": "json"},
+    "cycode":         {"fmt": "cycode-json",           "ext": "json"},
+    "checkmarx":      {"fmt": "checkmarx-json",        "ext": "json"},
 }
 
 
@@ -314,6 +320,70 @@ def parse_gitlab_sd_json(findings_path):
     return results
 
 
+def parse_github_ss_json(findings_path):
+    """
+    GitHub Secret Scanning alerts fetched via API + locations endpoint.
+    Format produced by the fetch script:
+    [ { "file_path": str, "line_number": int|null, "secret_type": str,
+        "state": str, "commit_sha": str, "location_type": str }, ... ]
+    location_type can be "commit" (history) or "blob" (HEAD).
+    """
+    with open(findings_path) as f:
+        data = json.load(f)
+    results = []
+    for item in data:
+        file_path   = item.get("file_path", "")
+        line_number = item.get("line_number")
+        results.append({
+            "file_path":   file_path,
+            "line_number": int(line_number) if line_number else None,
+            "raw":         item,
+        })
+    return results
+
+
+def parse_cycode_json(findings_path):
+    """
+    Cycode findings pre-parsed from CSV export into JSON.
+    Format produced by the Cycode CSV parser script:
+    [ { "file_path": str (repo-relative), "line_number": int|null,
+        "policy": str, "severity": str, "commit_sha": str }, ... ]
+    """
+    with open(findings_path) as f:
+        data = json.load(f)
+    results = []
+    for item in data:
+        file_path   = item.get("file_path", "")
+        line_number = item.get("line_number")
+        results.append({
+            "file_path":   file_path,
+            "line_number": int(line_number) if line_number else None,
+            "raw":         item,
+        })
+    return results
+
+
+def parse_checkmarx_json(findings_path):
+    """
+    Checkmarx One (CxOne) Secret Detection results parsed from the API.
+    Format produced by parse_cxone_results.py:
+    [ { "file_path": str (repo-relative, no leading slash),
+        "line_number": int|null, "rule_name": str, "severity": str }, ... ]
+    """
+    with open(findings_path) as f:
+        data = json.load(f)
+    results = []
+    for item in data:
+        file_path   = item.get("file_path", "")
+        line_number = item.get("line_number")
+        results.append({
+            "file_path":   file_path,
+            "line_number": int(line_number) if line_number else None,
+            "raw":         item,
+        })
+    return results
+
+
 PARSERS = {
     "gitleaks-json":          parse_gitleaks_json,
     "betterleaks-json":       parse_gitleaks_json,
@@ -323,6 +393,9 @@ PARSERS = {
     "semgrep-json":           parse_semgrep_json,
     "ggshield-json":          parse_ggshield_json,
     "gitlab-sd-json":         parse_gitlab_sd_json,
+    "github-ss-json":         parse_github_ss_json,
+    "cycode-json":            parse_cycode_json,
+    "checkmarx-json":         parse_checkmarx_json,
 }
 
 
@@ -339,26 +412,72 @@ def build_flagged_set(findings, manifest_entries):
     For each manifest entry, check if any finding matches on file path
     and (optionally) line number within LINE_TOLERANCE.
 
+    Each finding is consumed at most once — once it matches a manifest entry
+    it is removed from the pool, preventing double-matching (e.g. a single
+    finding at line N matching both a real secret at N-1 and an FP trap at N+2).
+
     Returns set of manifest IDs considered detected.
     """
     flagged_ids = set()
+    # Work on a copy — consumed findings are removed to prevent double-matching
+    remaining_findings = list(findings)
 
     for entry in manifest_entries:
-        for finding in findings:
+        best_finding_idx = None
+        best_diff = LINE_TOLERANCE + 1
+        for idx, finding in enumerate(remaining_findings):
             if not path_matches(finding["file_path"], entry["file_path"]):
                 continue
-            # Path matched. Check line number if available.
             f_line = finding["line_number"]
             m_line = entry["line_number"]
             if f_line is None:
-                # Tool doesn't report line numbers (e.g. detect-secrets with no line) — count as match on path alone
-                flagged_ids.add(entry["id"])
+                best_finding_idx = idx
+                best_diff = 0
                 break
-            if abs(f_line - m_line) <= LINE_TOLERANCE:
-                flagged_ids.add(entry["id"])
-                break
+            diff = abs(f_line - m_line)
+            if diff <= LINE_TOLERANCE and diff < best_diff:
+                best_finding_idx = idx
+                best_diff = diff
+        if best_finding_idx is not None:
+            flagged_ids.add(entry["id"])
+            remaining_findings.pop(best_finding_idx)
 
     return flagged_ids
+
+
+def build_flagged_set_pooled(pool, manifest_entries):
+    """
+    Like build_flagged_set but operates on a shared mutable pool.
+    Consumed findings are removed from the pool so they cannot match
+    entries in subsequent phases (prevents a single finding from
+    simultaneously counting as a TP and a FP for a nearby FP trap).
+
+    Returns (flagged_ids set, remaining_pool list).
+    """
+    flagged_ids = set()
+    remaining = list(pool)
+
+    for entry in manifest_entries:
+        best_idx = None
+        best_diff = LINE_TOLERANCE + 1
+        for idx, finding in enumerate(remaining):
+            if not path_matches(finding["file_path"], entry["file_path"]):
+                continue
+            f_line = finding["line_number"]
+            m_line = entry["line_number"]
+            if f_line is None:
+                best_idx = idx
+                best_diff = 0
+                break
+            diff = abs(f_line - m_line)
+            if diff <= LINE_TOLERANCE and diff < best_diff:
+                best_idx = idx
+                best_diff = diff
+        if best_idx is not None:
+            flagged_ids.add(entry["id"])
+            remaining.pop(best_idx)
+
+    return flagged_ids, remaining
 
 
 # ---------------------------------------------------------------------------
@@ -534,9 +653,16 @@ def score_tool(findings_path, fmt, manifest_path, tool_label, output_path=None,
     findings = parser(findings_path)
     print(f"  {len(findings)} findings loaded")
 
-    flagged_head    = build_flagged_set(findings, head_entries)
-    flagged_fp      = build_flagged_set(findings, fp_trap_entries)
-    flagged_history = build_flagged_set(findings, history_entries)
+    # Score head secrets first (highest priority), then FP traps, then history.
+    # Pass the same mutable pool through all three calls so a finding consumed
+    # by a head entry cannot also match a nearby FP trap entry (dedup across phases).
+    pool = list(findings)
+    flagged_head,    pool = build_flagged_set_pooled(pool, head_entries)
+    flagged_fp,      pool = build_flagged_set_pooled(pool, fp_trap_entries)
+    flagged_history, _    = build_flagged_set_pooled(list(findings), history_entries)
+    # Note: history uses the original findings (not the consumed pool) because
+    # history entries are in different commits / deleted files and won't overlap
+    # with HEAD entries at the same path+line.
 
     cats, overall, history, detail_rows = score_entries(
         head_entries, fp_trap_entries, history_entries,
@@ -565,6 +691,9 @@ ALL_TOOL_CONFIGS = [
     {"name": "semgrep",        "fmt": "semgrep-json",          "file": "findings.json"},
     {"name": "gitguardian",    "fmt": "ggshield-json",         "file": "findings.json"},
     {"name": "gitlab-sd",      "fmt": "gitlab-sd-json",        "file": "findings.json"},
+    {"name": "github-ss",      "fmt": "github-ss-json",        "file": "findings.json"},
+    {"name": "cycode",         "fmt": "cycode-json",           "file": "findings.json"},
+    {"name": "checkmarx",      "fmt": "checkmarx-json",        "file": "findings.json"},
 ]
 
 
