@@ -79,6 +79,7 @@ TOOLS = {
     "github-ss":      {"fmt": "github-ss-json",        "ext": "json"},
     "cycode":         {"fmt": "cycode-json",           "ext": "json"},
     "checkmarx":      {"fmt": "checkmarx-json",        "ext": "json"},
+    "sonarcloud":     {"fmt": "sonarcloud-json",       "ext": "json"},
 }
 
 
@@ -384,6 +385,27 @@ def parse_checkmarx_json(findings_path):
     return results
 
 
+def parse_sonarcloud_json(findings_path):
+    """
+    SonarCloud/SonarQube secrets findings pre-parsed from Issues API into JSON.
+    Format produced by parse_sonarcloud_results.py:
+    [ { "file_path": str (repo-relative), "line_number": int|null,
+        "rule": str, "message": str, "severity": str }, ... ]
+    """
+    with open(findings_path) as f:
+        data = json.load(f)
+    results = []
+    for item in data:
+        file_path   = item.get("file_path", "")
+        line_number = item.get("line_number")
+        results.append({
+            "file_path":   file_path,
+            "line_number": int(line_number) if line_number else None,
+            "raw":         item,
+        })
+    return results
+
+
 PARSERS = {
     "gitleaks-json":          parse_gitleaks_json,
     "betterleaks-json":       parse_gitleaks_json,
@@ -396,6 +418,7 @@ PARSERS = {
     "github-ss-json":         parse_github_ss_json,
     "cycode-json":            parse_cycode_json,
     "checkmarx-json":         parse_checkmarx_json,
+    "sonarcloud-json":        parse_sonarcloud_json,
 }
 
 
@@ -694,6 +717,7 @@ ALL_TOOL_CONFIGS = [
     {"name": "github-ss",      "fmt": "github-ss-json",        "file": "findings.json"},
     {"name": "cycode",         "fmt": "cycode-json",           "file": "findings.json"},
     {"name": "checkmarx",      "fmt": "checkmarx-json",        "file": "findings.json"},
+    {"name": "sonarcloud",     "fmt": "sonarcloud-json",       "file": "findings.json"},
 ]
 
 
